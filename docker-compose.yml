@@ -1,0 +1,42 @@
+version: '3.9'
+services:
+  balancer:
+    image: 'jwilder/nginx-proxy'
+    container_name: 'nginx-balancer'
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    ports:
+      - 80:80
+      - 443:443
+    restart: 'unless-stopped'
+  db:
+    image: postgres:latest
+    container_name: db
+    environment:
+      - POSTGRES_USER=${DB_USERNAME}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_DATABASE}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: 'unless-stopped'
+  todo-list:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: todo-list
+    volumes:
+      - ./.:/var/www/html
+    hostname: www.todo-list.com
+    environment:
+      - HTTPS_METHOD=noredirect
+      - VIRTUAL_HOST=www.todo-list.com
+    user: "${UID:-1000}:${UID:-1000}"
+    restart: 'unless-stopped'
+    depends_on:
+      - balancer
+      - db
+
+volumes:
+  postgres_data:
